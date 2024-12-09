@@ -16,9 +16,9 @@ from . import networks
 import sys
 
 
-class SingleModel(BaseModel):
+class QRCodeModel(BaseModel):
     def name(self):
-        return 'SingleGANModel'
+        return 'QRCodeModel'
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
@@ -26,15 +26,15 @@ class SingleModel(BaseModel):
         nb = opt.batchSize
         size = opt.fineSize
         self.opt = opt
-        self.input_A = self.Tensor(nb, opt.input_nc, size, size)   # input image channels
-        self.input_B = self.Tensor(nb, opt.output_nc, size, size)  #then crop to this size
+        self.input_A = self.Tensor(nb, opt.input_nc, size, size)
+        self.input_B = self.Tensor(nb, opt.output_nc, size, size)
         self.input_img = self.Tensor(nb, opt.input_nc, size, size)
         self.input_A_gray = self.Tensor(nb, 1, size, size)
 
-        if opt.vgg > 0:   #这边是vgg网络
-            self.vgg_loss = networks.PerceptualLoss(opt)
+        if opt.vgg > 0:
+            self.vgg_loss = networks.PerceptualLoss(opt)    #感受损失，一种基于深度学习的图像风格迁移方法中常用的损失函数
             if self.opt.IN_vgg:
-                self.vgg_patch_loss = networks.PerceptualLoss(opt)  #感知损失
+                self.vgg_patch_loss = networks.PerceptualLoss(opt)
                 self.vgg_patch_loss.cuda()
             self.vgg_loss.cuda()
             self.vgg = networks.load_vgg16("./model", self.gpu_ids)
@@ -42,7 +42,7 @@ class SingleModel(BaseModel):
             for param in self.vgg.parameters():
                 param.requires_grad = False
         elif opt.fcn > 0:
-            self.fcn_loss = networks.SemanticLoss(opt)  #语义分割损失
+            self.fcn_loss = networks.SemanticLoss(opt)
             self.fcn_loss.cuda()
             self.fcn = networks.load_fcn("./model")
             self.fcn.eval()
@@ -60,9 +60,8 @@ class SingleModel(BaseModel):
 
         if self.isTrain:
             use_sigmoid = opt.no_lsgan
-            #netD no_norm4
             self.netD_A = networks.define_D(opt.output_nc, opt.ndf,
-                                            opt.which_model_netD,  
+                                            opt.which_model_netD,
                                             opt.n_layers_D, opt.norm, use_sigmoid, self.gpu_ids, False)
             if self.opt.patchD:
                 self.netD_P = networks.define_D(opt.input_nc, opt.ndf,
@@ -82,11 +81,11 @@ class SingleModel(BaseModel):
             # self.fake_A_pool = ImagePool(opt.pool_size)
             self.fake_B_pool = ImagePool(opt.pool_size)
             # define loss functions
-            if opt.use_wgan:                      #这里为0
+            if opt.use_wgan:
                 self.criterionGAN = networks.DiscLossWGANGP()
             else:
                 self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)
-            if opt.use_mse:   #true
+            if opt.use_mse:
                 self.criterionCycle = torch.nn.MSELoss()
             else:
                 self.criterionCycle = torch.nn.L1Loss()
@@ -131,7 +130,7 @@ class SingleModel(BaseModel):
 
 
     def test(self):
-        self.real_A = Variable(self.input_A, volatile=True)   #不稳定是true
+        self.real_A = Variable(self.input_A, volatile=True)
         self.real_A_gray = Variable(self.input_A_gray, volatile=True)
         if self.opt.noise > 0:
             self.noise = Variable(torch.cuda.FloatTensor(self.real_A.size()).normal_(mean=0, std=self.opt.noise/255.))
@@ -186,16 +185,16 @@ class SingleModel(BaseModel):
         # Real
         pred_real = netD.forward(real)
         pred_fake = netD.forward(fake.detach())
-        if self.opt.use_wgan:   #0
+        if self.opt.use_wgan:
             loss_D_real = pred_real.mean()
             loss_D_fake = pred_fake.mean()
             loss_D = loss_D_fake - loss_D_real + self.criterionGAN.calc_gradient_penalty(netD, 
                                                 real.data, fake.data)
-        elif self.opt.use_ragan and use_ragan:       #true
+        elif self.opt.use_ragan and use_ragan:
             loss_D = (self.criterionGAN(pred_real - torch.mean(pred_fake), True) +
                                       self.criterionGAN(pred_fake - torch.mean(pred_real), False)) / 2
         else:
-            loss_D_real = self.criterionGAN(pred_real, True)  #标准GAN
+            loss_D_real = self.criterionGAN(pred_real, True)
             loss_D_fake = self.criterionGAN(pred_fake, False)
             loss_D = (loss_D_real + loss_D_fake) * 0.5
         # loss_D.backward()
@@ -208,9 +207,9 @@ class SingleModel(BaseModel):
         self.loss_D_A.backward()
     
     def backward_D_P(self):
-        if self.opt.hybrid_loss: #1
+        if self.opt.hybrid_loss:
             loss_D_P = self.backward_D_basic(self.netD_P, self.real_patch, self.fake_patch, False)
-            if self.opt.patchD_3 > 0:  #patchD_3是裁剪的块数 ,patch_1是一个list
+            if self.opt.patchD_3 > 0:
                 for i in range(self.opt.patchD_3):
                     loss_D_P += self.backward_D_basic(self.netD_P, self.real_patch_1[i], self.fake_patch_1[i], False)
                 self.loss_D_P = loss_D_P/float(self.opt.patchD_3 + 1)
@@ -365,7 +364,7 @@ class SingleModel(BaseModel):
                     self.loss_fcn_b += loss_fcn_patch/float(self.opt.patchD_3 + 1)
                 else:
                     self.loss_fcn_b += loss_fcn_patch
-            self.loss_G = self.loss_G_A + +  self.loss_fcn_b*vgg_w    #fcn_b是0
+            self.loss_G = self.loss_G_A + self.loss_fcn_b*vgg_w
         # self.loss_G = self.L1_AB + self.L1_BA
         self.loss_G.backward()
 

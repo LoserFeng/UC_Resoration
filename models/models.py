@@ -31,6 +31,12 @@ def create_model(opt):
         assert(opt.dataset_mode == 'single')
         from .test_model import TestModel
         model = TestModel()
+
+
+    elif opt.model=='QRCode':
+        assert(opt.dataset_mode=='unaligned')
+        from .qrcode_model import QRCodeModel
+        model=QRCodeModel()
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
     model.initialize(opt)

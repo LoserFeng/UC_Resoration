@@ -118,3 +118,10 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+test_dataset/*
+final_dataset/*
+
+.history/*
+
+ablation/*

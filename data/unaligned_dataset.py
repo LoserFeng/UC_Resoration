@@ -127,7 +127,11 @@ class UnalignedDataset(BaseDataset):
                 B_img = (B_img - torch.min(B_img))/(torch.max(B_img) - torch.min(B_img))
                 B_img = B_img*2. -1
             r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
-            A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2.
+
+
+
+            #A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2.
+            A_gray = (0.299*r+0.587*g+0.114*b)/2.
             A_gray = torch.unsqueeze(A_gray, 0)
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img,
                 'A_paths': A_path, 'B_paths': B_path}

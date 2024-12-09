@@ -27,6 +27,17 @@ def atten2im(image_tensor, imtype=np.uint8):
     image_numpy = image_numpy/(image_numpy.max()/255.0)
     return image_numpy.astype(imtype)
 
+
+def atten2im_qrcode(image_tensor, imtype=np.uint8):
+    image_tensor = image_tensor[0]
+    image_tensor = torch.cat((image_tensor, image_tensor, image_tensor), 0)
+    image_numpy = image_tensor.cpu().float().numpy()
+    image_numpy = (np.transpose(image_numpy, (1, 2, 0))) * 255.0
+    image_numpy = image_numpy/(image_numpy.max()/255.0)
+    return image_numpy.astype(imtype)
+
+
+    
 def latent2im(image_tensor, imtype=np.uint8):
     # image_tensor = (image_tensor - torch.min(image_tensor))/(torch.max(image_tensor)-torch.min(image_tensor))
     image_numpy = image_tensor[0].cpu().float().numpy()
